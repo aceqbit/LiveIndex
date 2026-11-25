@@ -1,0 +1,14 @@
+{
+  "git_sha": "e734bed2a6381e1847f89e8e6c93e3dde1ee9eea",
+  "utc": "20261125T161609Z",
+  "dataset": "nfcorpus",
+  "retriever": "vector",
+  "model": "BAAI/bge-small-en-v1.5",
+  "docs": 3633,
+  "chunks": 6370,
+  "docs_split_into_multiple_chunks": 2451,
+  "queries_evaluated": 323,
+  "ndcg@10": 0.3462714409402203,
+  "recall@10": 0.168265017698723,
+  "seconds": 1287.0
+}

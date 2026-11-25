@@ -1,0 +1,14 @@
+{
+  "git_sha": "e734bed2a6381e1847f89e8e6c93e3dde1ee9eea",
+  "utc": "20261125T155428Z",
+  "dataset": "scifact",
+  "retriever": "vector",
+  "model": "BAAI/bge-small-en-v1.5",
+  "docs": 5183,
+  "chunks": 8404,
+  "docs_split_into_multiple_chunks": 2829,
+  "queries_evaluated": 300,
+  "ndcg@10": 0.7127935163582564,
+  "recall@10": 0.8212222222222223,
+  "seconds": 1499.2
+}
