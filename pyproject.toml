@@ -1,0 +1,45 @@
+[project]
+name = "liveindex"
+version = "0.0.1"
+description = "Hybrid search engine with epoch-consistent reads, plus the liveindex-check conformance suite"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic>=2",
+    "numpy",
+    "chroma-hnswlib==0.7.5",
+    "sentence-transformers",
+    "onnxruntime",
+    "psycopg[binary]>=3",
+    "qdrant-client",
+    "hypothesis",
+    "beir",
+    "prometheus-client",
+    "opentelemetry-sdk",
+    "python-dotenv",
+]
+
+[dependency-groups]
+dev = ["pytest", "ruff", "mypy", "httpx"]
+
+[project.scripts]
+liveindex-check = "liveindex_check.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/liveindex", "src/liveindex_check"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
