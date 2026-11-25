@@ -27,7 +27,7 @@ class BM25Index:
 
     def __init__(self) -> None:
         self._post: dict[str, tuple[list[int], list[int]]] = {}
-        self._np: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        self._np: dict[str, tuple[int, np.ndarray, np.ndarray]] = {}
         self._lens = np.zeros(1024, dtype=np.int64)
         self.n = 0
         self._total_len = 0
@@ -52,19 +52,24 @@ class BM25Index:
                 ids, tfs = self._post.setdefault(t, ([], []))
                 ids.append(cid)
                 tfs.append(c)
-                self._np.pop(t, None)
             cid += 1
         self.n = cid
 
     def _arrays(self, term: str) -> tuple[np.ndarray, np.ndarray] | None:
-        a = self._np.get(term)
-        if a is None:
-            p = self._post.get(term)
-            if p is None:
-                return None
-            a = (np.asarray(p[0], dtype=np.int64), np.asarray(p[1], dtype=np.float64))
-            self._np[term] = a
-        return a
+        """Postings as arrays; the cache entry records its length so a concurrent append is never lost."""
+        p = self._post.get(term)
+        if p is None:
+            return None
+        length = min(len(p[0]), len(p[1]))
+        c = self._np.get(term)
+        if c is None or c[0] != length:
+            c = (
+                length,
+                np.asarray(p[0][:length], dtype=np.int64),
+                np.asarray(p[1][:length], dtype=np.float64),
+            )
+            self._np[term] = c
+        return c[1], c[2]
 
     def score(self, query: str, mask: np.ndarray, top_n: int = 100) -> list[tuple[int, float]]:
         """Top-n (chunk_id, score) among chunks where mask is True. Never scores masked-out chunks."""
@@ -85,7 +90,7 @@ class BM25Index:
             ids, tfs = ids[ok], tfs[ok]
             if len(ids) == 0:
                 continue
-            df = len(self._post[term][0])
+            df = int(keep.sum())
             idf = math.log(1 + (n_docs - df + 0.5) / (df + 0.5))
             dl = self._lens[ids]
             scores[ids] += idf * tfs * (K1 + 1) / (tfs + K1 * (1 - B + B * dl / avgdl))

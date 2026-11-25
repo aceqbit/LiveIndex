@@ -1,0 +1,11 @@
+{
+  "git_sha": "d9db287a1f416c0671df9eedda84b33ca2546bc6",
+  "utc": "20261125T163256Z",
+  "dataset": "scifact",
+  "docs": 5183,
+  "chunks": 8404,
+  "index_epoch": 5183,
+  "wal_ingest_seconds": 26.25,
+  "replay_seconds_first": 120.93,
+  "replay_seconds_restart": 74.77
+}

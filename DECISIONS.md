@@ -14,3 +14,18 @@ The PG18 server has no `vector` extension, and the Windows install from the pgve
 
 ## D5: extra dependencies beyond section 3
 `python-dotenv` (read `.env`), `httpx` (FastAPI TestClient, dev only), `hatchling` (build backend). All are plumbing, not new technologies.
+
+## D6: chunking and embedding run in the indexer, not before the WAL commit
+CLAUDE.md section 6 chunks and embeds before the transaction. We store the document text in the WAL and let the indexer chunk and embed on apply (embeddings are cached by text hash). The acknowledgement still means "durable at epoch e"; visibility is gated by `index_epoch`. This keeps the write transaction short and makes replay deterministic.
+
+## D7: group membership changes use the existing WAL ops
+The WAL `op` check allows only upsert/delete/acl_grant/acl_revoke. Group add/remove are stored as `acl_grant`/`acl_revoke` rows with `doc_id = ''` and payload `{group, member}`.
+
+## D8: `mark_deleted` and time travel
+Per section 6.5 a delete tombstones chunks in the HNSW graph after setting `dead_epoch`. Tombstoned chunks never come back from the graph, so a query at an epoch before the delete finds the old version through BM25 and the exact path only. Time travel is a test feature, not a product guarantee for the vector side. Updates do not tombstone old versions.
+
+## D9: copy-on-grow for readers
+Readers take one immutable `View` (epoch + array references + bounds). Growth allocates new arrays (and a new HNSW graph) and swaps the reference, so no reader holds a lock and no resize happens under a running query.
+
+## D10: embedding in tests
+Tests use a deterministic hashed bag-of-words embedder (`tests/conftest.py`). Relevance numbers in `results/` use the real bge model.
