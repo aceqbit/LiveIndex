@@ -1,4 +1,5 @@
 """FastAPI app: writes commit to Postgres and return an epoch; reads use the indexer's snapshot."""
+
 from __future__ import annotations
 
 import os
@@ -6,17 +7,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException
 
+from liveindex.api.auth import resolve_principal
 from liveindex.api.models import AclRequest, Hit, SearchRequest, SearchResponse, UpsertRequest
 from liveindex.indexer import Indexer
 from liveindex.search import EpochTimeout, Searcher
 from liveindex.wal.log import WriteLog
-
-
-def principal_from(x_test_principal: str | None) -> str:
-    """Test-only principal header, honoured only when ALLOW_TEST_PRINCIPAL=1 (replaced by tokens in 1.4)."""
-    if os.environ.get("ALLOW_TEST_PRINCIPAL") == "1" and x_test_principal:
-        return x_test_principal
-    raise HTTPException(401, "no verified principal")
 
 
 def create_app(embedder=None, log: WriteLog | None = None) -> FastAPI:
@@ -57,13 +52,25 @@ def create_app(embedder=None, log: WriteLog | None = None) -> FastAPI:
         except KeyError:
             raise HTTPException(404, "no such document") from None
 
+    @app.put("/v1/groups/{grp}/members/{member}")
+    def group_add(grp: str, member: str) -> dict:
+        return {"epoch": state["log"].group_add(grp, member)}
+
+    @app.delete("/v1/groups/{grp}/members/{member}")
+    def group_remove(grp: str, member: str) -> dict:
+        return {"epoch": state["log"].group_remove(grp, member)}
+
     @app.get("/v1/epoch")
     def epoch() -> dict:
         return {"committed": state["log"].committed_epoch(), "index_epoch": state["ix"].index_epoch}
 
     @app.post("/v1/search")
-    def search(req: SearchRequest, x_test_principal: str | None = Header(default=None)) -> SearchResponse:
-        principal = principal_from(x_test_principal)
+    def search(
+        req: SearchRequest,
+        x_test_principal: str | None = Header(default=None),
+        authorization: str | None = Header(default=None),
+    ) -> SearchResponse:
+        principal = resolve_principal(authorization, x_test_principal)
         try:
             e, hits, _ = state["searcher"].search(req.query, req.k, principal, req.min_epoch)
         except EpochTimeout:

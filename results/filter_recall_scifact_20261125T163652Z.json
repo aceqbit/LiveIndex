@@ -1,0 +1,33 @@
+{
+  "git_sha": "ea1efe0d56238d167d3bf5d4a2dddaf6863b86a2",
+  "utc": "20261125T163652Z",
+  "dataset": "scifact",
+  "chunks": 8404,
+  "ef": 200,
+  "rows": [
+    {
+      "selectivity": 0.5,
+      "visible_fraction": 0.5,
+      "queries": 300,
+      "recall_filtered_hnsw_graph_only": 1.0,
+      "recall_default_with_fallback": 1.0,
+      "fallback_used_fraction": 0.0
+    },
+    {
+      "selectivity": 0.1,
+      "visible_fraction": 0.1,
+      "queries": 300,
+      "recall_filtered_hnsw_graph_only": 1.0,
+      "recall_default_with_fallback": 1.0,
+      "fallback_used_fraction": 0.0
+    },
+    {
+      "selectivity": 0.02,
+      "visible_fraction": 0.02,
+      "queries": 300,
+      "recall_filtered_hnsw_graph_only": 1.0,
+      "recall_default_with_fallback": 1.0,
+      "fallback_used_fraction": 1.0
+    }
+  ]
+}
