@@ -17,8 +17,8 @@ lint:
     uv run ruff check .
     uv run mypy src
 
-eval DATASET="scifact" RETRIEVER="all":
-    Write-Error "eval: not implemented (prompt 1.1)"; exit 1
+eval DATASET="scifact" RETRIEVER="vector":
+    uv run python -m liveindex.eval.run --dataset {{DATASET}} --retriever {{RETRIEVER}}
 
 suite SYSTEM="liveindex" EXPECT="pass":
     Write-Error "suite: not implemented (prompt 1.5)"; exit 1
