@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -16,6 +17,7 @@ from liveindex.wal.log import WriteLog
 
 def create_app(embedder=None, log: WriteLog | None = None) -> FastAPI:
     state: dict = {}
+    logging.basicConfig(level=logging.INFO)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -24,6 +26,7 @@ def create_app(embedder=None, log: WriteLog | None = None) -> FastAPI:
             from liveindex.embed import Embedder
 
             emb = Embedder()
+            emb.warm()
         wl = log or WriteLog()
         ix = Indexer(wl, emb)
         wl.on_commit = ix.wake

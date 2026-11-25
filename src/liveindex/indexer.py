@@ -108,18 +108,26 @@ class Indexer:
     def apply_epoch(self, epoch: int, rows: list[WalRow]) -> None:
         for row in rows:
             self._apply_row(row)
+        self._publish(epoch)
+
+    def _publish(self, epoch: int) -> None:
         view = View(epoch, self._born, self._dead, self._dix, self._n, len(self.doc_index))
         with self._cv:
             self.view = view  # publish: arrays and epoch become visible together
             self._cv.notify_all()
 
     def catch_up(self) -> int:
+        # Read the committed epoch first: every epoch <= it has all its WAL rows committed already.
+        committed = self.log.committed_epoch()
         rows = self.log.read_after(self.index_epoch)
         by_epoch: dict[int, list[WalRow]] = {}
         for r in rows:
             by_epoch.setdefault(r.epoch, []).append(r)
         for e in sorted(by_epoch):
-            self.apply_epoch(e, by_epoch[e])
+            if e <= committed:
+                self.apply_epoch(e, by_epoch[e])
+        if committed > self.index_epoch:
+            self._publish(committed)  # epochs that wrote no WAL rows (no-op ACL changes)
         return len(by_epoch)
 
     def wake(self, _epoch: int = 0) -> None:

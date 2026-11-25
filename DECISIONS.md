@@ -29,3 +29,6 @@ Readers take one immutable `View` (epoch + array references + bounds). Growth al
 
 ## D10: embedding in tests
 Tests use a deterministic hashed bag-of-words embedder (`tests/conftest.py`). Relevance numbers in `results/` use the real bge model.
+
+## D11: settle deadline for LiveIndex runs is 60 s
+Embedding on this CPU takes about 0.3 s per text (measured with `HF_HUB_OFFLINE=1`, bge-small, 4 threads), so the indexer can lag several seconds under bursts. The suite's `--settle-timeout` defaults to 60 s; time-to-invisible is measured separately from the first clean query after the ack.

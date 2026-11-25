@@ -20,8 +20,8 @@ lint:
 eval DATASET="scifact" RETRIEVER="vector":
     uv run python -m liveindex.eval.run --dataset {{DATASET}} --retriever {{RETRIEVER}}
 
-suite SYSTEM="liveindex" EXPECT="pass":
-    Write-Error "suite: not implemented (prompt 1.5)"; exit 1
+suite SYSTEM="liveindex" EXPECT="pass" OPS="1000":
+    uv run python scripts/suite.py --system {{SYSTEM}} --expect {{EXPECT}} --ops {{OPS}}
 
 suite-all:
     Write-Error "suite-all: not implemented (prompt 2.2)"; exit 1

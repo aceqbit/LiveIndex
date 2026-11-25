@@ -75,3 +75,15 @@ def test_epochs_are_dense_and_wal_ordered(log, emb):
     es = [log.upsert(f"d{i}", f"text {i}", allowed=["u"]) for i in range(5)]
     assert es == [1, 2, 3, 4, 5]
     assert [r.epoch for r in log.read_after(0)][:3] == [1, 1, 2]  # upsert + acl_grant per epoch
+
+
+def test_noop_write_still_advances_index_epoch(log, emb):
+    """Regression (found by the suite): a set_acl that changes nothing bumps the epoch but writes no
+    WAL rows; the indexer must still reach that epoch or min_epoch waits time out."""
+    ix, s = make(log, emb)
+    log.upsert("d", "some text here", allowed=["u"])
+    e = log.set_acl("d", ["u"])  # no-op
+    assert e == 2
+    ix.catch_up()
+    assert ix.index_epoch == 2
+    assert s.search("text", principal="u", min_epoch=e, timeout=0.5)[1]

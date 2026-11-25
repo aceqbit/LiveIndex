@@ -1,0 +1,43 @@
+{
+  "system": "liveindex",
+  "utc": "20261125T185827Z",
+  "git_sha": "4420a84326a24618a87063f0b94d1e4096ac5850",
+  "ops": 576,
+  "queries": 691,
+  "examples": 36,
+  "violations": {},
+  "leak_rate": 0.0,
+  "stale_hit_rate": 0.0,
+  "time_to_invisible": {
+    "samples": 190,
+    "p50": 0.034594800003105775,
+    "p95": 1.4559525000222493,
+    "p99": 2.7663159999938216,
+    "by_kind": {
+      "delete": {
+        "n": 21,
+        "p50": 0.3511389999766834,
+        "p95": 1.4142328999878373
+      },
+      "revoke": {
+        "n": 92,
+        "p50": 0.027882599999429658,
+        "p95": 1.1950244999898132
+      },
+      "update": {
+        "n": 77,
+        "p50": 0.034594800003105775,
+        "p95": 1.7624276999849826
+      }
+    }
+  },
+  "seeds": [
+    1
+  ],
+  "steps_per_example": 40,
+  "violated": [],
+  "shrunk_sequence": [],
+  "failure_file": null,
+  "sample_violations": [],
+  "expect": "pass"
+}

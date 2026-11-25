@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -24,10 +25,16 @@ class Embedder:
         self._model = None
         self._tok = None
         self._db = None
+        self._lock = threading.Lock()
         if cache_path is not None:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             self._db = sqlite3.connect(str(cache_path), check_same_thread=False)
             self._db.execute("CREATE TABLE IF NOT EXISTS emb (k TEXT PRIMARY KEY, v BLOB)")
+
+    def warm(self) -> None:
+        """Load model and tokenizer now, on the calling thread (lazy imports are not thread-safe)."""
+        _ = self.tokenizer
+        self.model.encode(["warm up"], normalize_embeddings=True, show_progress_bar=False)
 
     @property
     def model(self):
@@ -46,7 +53,8 @@ class Embedder:
         return self._tok
 
     def count_tokens(self, text: str) -> int:
-        return len(self.tokenizer.tokenize(text))
+        with self._lock:
+            return len(self.tokenizer.tokenize(text))
 
     def _get(self, keys: list[str]) -> dict[str, np.ndarray]:
         found: dict[str, np.ndarray] = {}
@@ -72,10 +80,11 @@ class Embedder:
                 todo[k] = t
         if todo:
             ks = list(todo)
-            vecs = self.model.encode(
-                [todo[k] for k in ks], batch_size=batch_size, normalize_embeddings=True,
-                convert_to_numpy=True, show_progress_bar=False,
-            ).astype(np.float32)
+            with self._lock:
+                vecs = self.model.encode(
+                    [todo[k] for k in ks], batch_size=batch_size, normalize_embeddings=True,
+                    convert_to_numpy=True, show_progress_bar=False,
+                ).astype(np.float32)
             for k, v in zip(ks, vecs, strict=True):
                 cached[k] = v
             if self._db is not None:
