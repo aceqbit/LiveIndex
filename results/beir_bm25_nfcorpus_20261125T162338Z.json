@@ -1,0 +1,14 @@
+{
+  "git_sha": "786d2bfbd347be2165289a537a5a17798dde66a1",
+  "utc": "20261125T162338Z",
+  "dataset": "nfcorpus",
+  "retriever": "bm25",
+  "model": "BAAI/bge-small-en-v1.5",
+  "docs": 3633,
+  "chunks": 6370,
+  "docs_split_into_multiple_chunks": 2451,
+  "queries_evaluated": 323,
+  "ndcg@10": 0.30565842694476375,
+  "recall@10": 0.1498167082898607,
+  "seconds": 67.4
+}

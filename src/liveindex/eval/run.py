@@ -35,6 +35,37 @@ def write_result(name: str, payload: dict) -> Path:
     return path
 
 
+def engine_run(kind, emb, texts, vecs, owners, qs, k=10):
+    """BM25 or hybrid (BM25 + HNSW, RRF) through the engine's own index classes."""
+    import numpy as np
+
+    from liveindex.index.bm25 import BM25Index
+    from liveindex.index.hnsw import HNSWIndex
+    from liveindex.search import hybrid_search
+
+    bm = BM25Index()
+    bm.add_chunks(texts)
+    hn = HNSWIndex(capacity=len(texts))
+    hn.add(vecs)
+    mask = np.ones(len(texts), dtype=bool)
+    qids = list(qs)
+    qv = emb.encode_queries([qs[q] for q in qids])
+    run = {}
+    for i, q in enumerate(qids):
+        if kind == "bm25":
+            ranked = [c for c, _ in bm.score(qs[q], mask, 100)]
+        else:
+            ranked = [c for c, _ in hybrid_search(bm, hn, qs[q], qv[i], mask, 100)[0]]
+        docs: list[str] = []
+        for c in ranked:
+            if owners[c] not in docs:
+                docs.append(owners[c])
+            if len(docs) == k:
+                break
+        run[q] = docs
+    return run
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", default="scifact")
@@ -45,10 +76,13 @@ def main() -> None:
     t0 = time.time()
     texts, owners, multi = build_chunks(corpus, emb)
     vecs = emb.encode(texts)
-    if a.retriever != "vector":
-        raise SystemExit(f"unknown retriever {a.retriever}")
     qs = {q: queries[q] for q in qrels if q in queries}
-    run = VectorRetriever(emb, vecs, owners).search(qs, 10)
+    if a.retriever == "vector":
+        run = VectorRetriever(emb, vecs, owners).search(qs, 10)
+    elif a.retriever in ("bm25", "hybrid"):
+        run = engine_run(a.retriever, emb, texts, vecs, owners, qs)
+    else:
+        raise SystemExit(f"unknown retriever {a.retriever}")
     m = evaluate(run, qrels, 10)
     p = write_result(
         f"beir_{a.retriever}_{a.dataset}",
