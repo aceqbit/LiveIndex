@@ -63,7 +63,9 @@ def _pick(seq: list, i: int):
     return seq[i % len(seq)]
 
 
-def build_machine(adapter: Adapter, stats: Stats, holder: FailureHolder, raise_on_violation: bool):
+def build_machine(
+    adapter: Adapter, stats: Stats, holder: FailureHolder, raise_on_violation: bool, only: str | None = None
+):
     class Machine(RuleBasedStateMachine):
         def __init__(self) -> None:
             super().__init__()
@@ -81,11 +83,14 @@ def build_machine(adapter: Adapter, stats: Stats, holder: FailureHolder, raise_o
 
         def _violate(self, vs: list[Violation]) -> None:
             for v in vs:
+                if only is not None and v.invariant != only:
+                    continue
                 stats.violations[v.invariant] = stats.violations.get(v.invariant, 0) + 1
                 if len(stats.samples) < 20:
                     stats.samples.append({"invariant": v.invariant, "detail": v.detail, "step": len(self.steps)})
                 holder.violation = v
                 holder.steps = list(self.steps)
+            vs = [v for v in vs if only is None or v.invariant == only]
             if vs and raise_on_violation:
                 raise SuiteViolation(f"{vs[0].invariant}: {vs[0].detail}")
 
@@ -253,6 +258,7 @@ def run_machine(
     max_examples: int,
     steps: int,
     raise_on_violation: bool,
+    only: str | None = None,
 ) -> None:
     cfg = settings(
         max_examples=max_examples,
@@ -263,4 +269,4 @@ def run_machine(
         print_blob=False,
         suppress_health_check=list(HealthCheck),
     )
-    run_state_machine_as_test(build_machine(adapter, stats, holder, raise_on_violation), settings=cfg)
+    run_state_machine_as_test(build_machine(adapter, stats, holder, raise_on_violation, only), settings=cfg)

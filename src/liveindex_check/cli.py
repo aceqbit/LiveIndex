@@ -24,27 +24,33 @@ def run_suite(adapter, *, system: str, ops: int, steps: int, seeds: list[int], r
             adapter, stats, holder, max_examples=max(1, per_seed // steps), steps=steps, raise_on_violation=False
         )
     m = metrics(stats)
-    failure_path = None
-    shrunk: list[str] = []
-    if stats.violations:  # shrink pass: Hypothesis minimises a failing sequence
+    failure_paths: dict[str, str] = {}
+    shrunk_by: dict[str, list[str]] = {}
+    for inv in sorted(stats.violations):  # shrink pass per invariant: Hypothesis minimises a failing sequence
         shrink_stats, shrink_holder = Stats(), FailureHolder()
         random.seed(seeds[0])
         try:
             run_machine(
                 adapter, shrink_stats, shrink_holder, max_examples=max(50, per_seed // steps), steps=steps,
-                raise_on_violation=True,
+                raise_on_violation=True, only=inv,
             )
         except Exception as exc:  # noqa: BLE001 - Hypothesis re-raises the shrunk failure; holder has the steps
-            print("shrink pass ended with:", type(exc).__name__, file=sys.stderr)
-        use = shrink_holder if shrink_holder.violation else holder
-        failure_path = write_failure(system, use, seeds[0], results_dir)
-        shrunk = render_steps(use.steps)
+            print(f"shrink pass for {inv} ended with:", type(exc).__name__, file=sys.stderr)
+        if shrink_holder.violation:
+            path = write_failure(f"{system}_{inv}", shrink_holder, seeds[0], results_dir)
+            failure_paths[inv] = str(path)
+            shrunk_by[inv] = render_steps(shrink_holder.steps)
+    first = next(iter(shrunk_by.values()), [])
+    failure_path = next(iter(failure_paths.values()), None)
+    shrunk = first
     return {
         **m,
         "seeds": seeds,
         "steps_per_example": steps,
         "violated": sorted(stats.violations),
         "shrunk_sequence": shrunk,
+        "shrunk_sequences": shrunk_by,
+        "failure_files": failure_paths,
         "failure_file": str(failure_path) if failure_path else None,
         "sample_violations": stats.samples,
     }
@@ -80,8 +86,10 @@ def main(argv: list[str] | None = None) -> int:
     path = write_report(name, out, Path(args.results_dir))
     keys = ("ops", "queries", "violations", "leak_rate", "stale_hit_rate", "time_to_invisible")
     print(json.dumps({k: out[k] for k in keys}, indent=2))
-    for line in out["shrunk_sequence"]:
-        print("  ", line)
+    for inv, lines in out["shrunk_sequences"].items():
+        print(f"minimal failing sequence for {inv}:")
+        for line in lines:
+            print("  ", line)
     print("report:", path)
     if args.expect == "pass":
         return 1 if violated else 0
